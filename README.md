@@ -1,6 +1,6 @@
 # 🤖 AI Voice Agent - 30 Days of AI Challenge
 
-This project is a fully conversational AI voice agent built as part of the **[30 Days of AI Voice Agents](https://www.linkedin.com/company/murf-ai/)** challenge by Murf AI. It features a complete voice-in, voice-out pipeline with persistent chat history, allowing for natural, context-aware conversations.
+This project is a fully conversational AI voice agent built as part of the **#30DaysofVoiceAgents** challenge by Murf AI. It features a complete voice-in, voice-out pipeline with persistent chat history, allowing for natural, context-aware conversations.
 
 The application is built with a Python backend using FastAPI and a vanilla JavaScript frontend.
 
@@ -10,26 +10,29 @@ The application is built with a Python backend using FastAPI and a vanilla JavaS
 
 * **Real-time Voice Conversation:** Speak to the agent and receive a spoken response.
 * **Context-Aware Memory:** The agent remembers previous turns in the conversation using a session-based chat history.
-* **Persistent Chat Sessions:** Chat history is saved to disk and survives server restarts.
+* **Persistent Chat Sessions:** Chat history is saved to disk using Python's `shelve` module and survives server restarts.
 * **Session Management UI:** A sidebar displays all past conversations, allowing you to load and delete previous chats.
 * **End-to-End AI Pipeline:**
     * **Speech-to-Text:** Powered by **AssemblyAI**.
     * **LLM Logic:** Intelligent and contextual responses from **Google Gemini**.
     * **Text-to-Speech:** Natural-sounding voice output from **Murf AI**.
 * **Robust Error Handling:** The agent provides a spoken fallback message if it cannot connect to the LLM.
-* **Modern UI:** A clean, revamped interface focused on the conversation, featuring a single, animated recording button.
 
-## 🏛️ Architecture
+## 🏛️ Architectural Decisions & Tradeoffs
 
-The application uses a decoupled frontend-backend architecture:
+This section documents the reasoning behind the technical choices made during development.
 
-1.  **Frontend (Vanilla JS):** A single-page application that captures microphone audio, manages the UI, and communicates with the backend.
-2.  **Backend (Python/FastAPI):** An API server that orchestrates the entire AI pipeline. It receives audio from the frontend and makes sequential calls to the external AI services.
-3.  **Datastore (`shelve`):** A simple file-based persistent dictionary to store chat session histories.
-4.  **External Services:**
-    * **AssemblyAI:** For accurate speech transcription.
-    * **Google Gemini:** For generative AI responses.
-    * **Murf AI:** For high-quality text-to-speech conversion.
+* **Backend Framework: FastAPI**
+    * **Decision:** FastAPI was chosen as recommended by the challenge.
+    * **Justification:** Its modern, asynchronous nature is perfect for handling I/O-bound tasks like making API calls to external services. Features like automatic OpenAPI documentation (`/docs`) and Pydantic data validation are incredibly valuable for rapid development and debugging.
+
+* **LLM: Google Gemini (`gemini-1.5-flash`)**
+    * **Decision:** The Gemini API was used as the core intelligence layer.
+    * **Justification:** It offers a very generous free tier (60 requests per minute) which is more than sufficient for development and prototyping. The `gemini-1.5-flash` model provides a great balance of speed and capability.
+
+* **Datastore: Python `shelve` Module**
+    * **Decision:** Instead of a full-fledged database, the built-in `shelve` module was used for persistence.
+    * **Tradeoff:** The primary benefit is **simplicity**. It requires no external dependencies or setup and acts like a persistent dictionary, making it ideal for a prototype. The tradeoff is that it is **not suitable for production** with high concurrency, as file-based databases can run into locking issues. It was chosen over a simple in-memory dictionary, which was not persistent across server restarts.
 
 ## 🛠️ Tech Stack
 
@@ -67,12 +70,7 @@ Follow these instructions to set up and run the project on your local machine.
         source venv/bin/activate
         ```
 
-3.  **Create a `requirements.txt` file:**
-    Before installing dependencies, it's best practice to list them. You can generate this file automatically with the following command (run this after you've `pip install`ed all the libraries yourself):
-    ```bash
-    pip freeze > requirements.txt
-    ```
-    Then, install the dependencies from this file:
+3.  **Install dependencies:**
     ```bash
     pip install -r requirements.txt
     ```
@@ -87,17 +85,8 @@ Follow these instructions to set up and run the project on your local machine.
 
 ### Running the Application
 
-1.  Make sure your virtual environment is activated.
-2.  Run the FastAPI server from the root directory:
+1.  From the root directory, run the FastAPI server:
     ```bash
     uvicorn main:app --reload
     ```
-3.  The server will start, and you'll see a message like:
-    `INFO: Uvicorn running on http://127.0.0.1:8000`
-
-### Usage
-
-1.  Open your web browser and navigate to `http://127.0.0.1:8000`.
-2.  Click the **"+ New Chat"** button in the sidebar to start a new conversation.
-3.  Click the microphone button to start recording, speak your query, and click it again to stop.
-4.  The agent will process your request and respond with voice. The conversation will appear in the chat window.
+2.  Open your web browser and navigate to `http://127.0.0.1:8000`.
