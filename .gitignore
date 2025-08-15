@@ -1,0 +1,33 @@
+# --- Environment Variables ---
+# This is the most important rule. Never commit your secret API keys!
+.env
+
+# --- Python ---
+# Virtual environment folder
+venv/
+/venv/
+
+# Python cache files and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Database ---
+# Shelve database files for chat history.
+# The wildcard (*) ignores all related files like .db.dat, .db.bak, etc.
+chat_history.db*
+
+# --- IDE / Editor Specific ---
+# Visual Studio Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# --- Operating System Files ---
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

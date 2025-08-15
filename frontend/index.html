@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Chat History</h2>
+                <button id="newChatBtn" class="new-chat-btn">+ New Chat</button>
+            </div>
+            <ul id="sessionList" class="session-list">
+                </ul>
+        </aside>
+
+        <main class="chat-area">
+            <div id="welcomeScreen" class="welcome-screen">
+                <h1>Conversational AI</h1>
+                <p>Start a new chat or select one from the history.</p>
+            </div>
+
+            <div id="chatScreen" class="chat-screen" style="display: none;">
+                <div id="chatContainer" class="chat-container">
+                    </div>
+                <div class="input-area">
+                    <div id="convoStatus" class="status-text">Click the mic to start</div>
+                    <button type="button" id="recordBtn" class="record-btn">
+                        <span class="icon">🎙️</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <audio id="convoAudioPlayer" class="hidden-player"></audio>
+    <script src="/static/script.js"></script>
+</body>
+</html>

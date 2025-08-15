@@ -1,0 +1,134 @@
+/* static/style.css */
+:root {
+    --primary-font: 'Poppins', sans-serif;
+    --background-color: #121212;
+    --surface-color: #1e1e1e;
+    --sidebar-color: #181818;
+    --primary-accent: #6a11cb;
+    --secondary-accent: #2575fc;
+    --text-color: #e0e0e0;
+    --subtle-text-color: #888;
+    --border-color: #333;
+    --recording-color: #e62e2e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: var(--primary-font);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    overflow: hidden;
+}
+.app-container { display: flex; height: 100vh; }
+
+/* --- Sidebar Styles --- */
+.sidebar {
+    width: 280px;
+    background-color: var(--sidebar-color);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+}
+.sidebar-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.sidebar-header h2 { font-size: 1.5rem; }
+.new-chat-btn {
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: 1rem;
+    background: linear-gradient(45deg, var(--primary-accent), var(--secondary-accent));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.new-chat-btn:hover { transform: scale(1.05); }
+.session-list {
+    list-style: none;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+.session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    word-break: break-all;
+}
+.session-item:hover { background-color: var(--surface-color); }
+.session-item.active { background-color: var(--primary-accent); }
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--subtle-text-color);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+.session-item:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { background-color: var(--recording-color); color: white; }
+
+/* --- Main Chat Area Styles --- */
+.chat-area { flex-grow: 1; display: flex; flex-direction: column; }
+.welcome-screen {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.welcome-screen h1 { font-size: 3rem; }
+.welcome-screen p { color: var(--subtle-text-color); font-size: 1.2rem; }
+.chat-screen {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.chat-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+.chat-bubble {
+    padding: 1rem;
+    border-radius: 12px;
+    max-width: 75%;
+    line-height: 1.5;
+    animation: fadeIn 0.5s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.user-bubble { background-color: var(--primary-accent); color: white; align-self: flex-end; border-bottom-right-radius: 0; }
+.ai-bubble { background-color: var(--surface-color); color: var(--text-color); align-self: flex-start; border-bottom-left-radius: 0; }
+.input-area {
+    padding: 1.5rem;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+}
+.status-text { min-height: 24px; color: var(--subtle-text-color); margin-bottom: 1rem; }
+.record-btn { /* Same as Day 12 styles */
+    width: 80px; height: 80px; font-size: 2rem; border-radius: 50%; border: 3px solid var(--primary-accent); background-color: transparent;
+    color: var(--text-color); cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: all 0.3s ease; outline: none;
+}
+.record-btn:hover:not(.recording) { background-color: var(--primary-accent); border-color: var(--secondary-accent); transform: scale(1.1); }
+.record-btn.recording { background-color: var(--recording-color); border-color: var(--recording-color); color: white; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(230, 46, 46, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(230, 46, 46, 0); } 100% { box-shadow: 0 0 0 0 rgba(230, 46, 46, 0); } }
+.hidden-player { display: none; }
