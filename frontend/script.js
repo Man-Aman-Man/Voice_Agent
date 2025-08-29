@@ -98,20 +98,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- WebSocket Logic ---
     function setupWebSocket() {
-        return new Promise((resolve, reject) => {
-            const keys = getApiKeys();
-            const wsUrl = `ws://127.0.0.1:8000/ws?assemblyai_key=${keys.assemblyai}&google_gemini_key=${keys.google_gemini}&murf_ai_key=${keys.murf_ai}&alpha_vantage_key=${keys.alpha_vantage}&exchange_rate_key=${keys.exchange_rate}`;
-            
-            webSocket = new WebSocket(wsUrl);
-            webSocket.onopen = resolve;
-            webSocket.onmessage = handleWebSocketMessage;
-            webSocket.onerror = (error) => { console.error("WebSocket Error:", error); statusMessage.textContent = "Connection error."; reject(error); };
-            webSocket.onclose = (event) => { 
-                if (isRecording) { stopRecordingCleanup(); }
-                statusMessage.textContent = event.reason || "Session finished. Click mic to start again.";
-            };
-        });
-    }
+    return new Promise((resolve, reject) => {
+        const keys = getApiKeys();
+
+        // --- THIS IS THE FIX ---
+        // Dynamically determine the WebSocket protocol and host
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws?assemblyai_key=${keys.assemblyai}&google_gemini_key=${keys.google_gemini}&murf_ai_key=${keys.murf_ai}&alpha_vantage_key=${keys.alpha_vantage}&exchange_rate_key=${keys.exchange_rate}`;
+
+        webSocket = new WebSocket(wsUrl);
+        // ... (the rest of the function is unchanged)
+        webSocket.onopen = resolve;
+        webSocket.onmessage = handleWebSocketMessage;
+        webSocket.onerror = (error) => { console.error("WebSocket Error:", error); statusMessage.textContent = "Connection error."; reject(error); };
+        webSocket.onclose = (event) => { 
+            if (isRecording) { stopRecordingCleanup(); }
+            statusMessage.textContent = event.reason || "Session finished. Ready for next chat.";
+        };
+    });
+}
 
     function handleWebSocketMessage(event) {
         const message = event.data;
