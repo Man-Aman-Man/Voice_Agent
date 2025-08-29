@@ -1,4 +1,4 @@
-/* static/style.css - Professional Theme */
+/* static/style.css - Kratosni Final Theme */
 :root {
     --primary-font: 'Poppins', sans-serif;
     --background-color: #1a1a2e;
@@ -20,38 +20,100 @@ body {
 }
 .app-container { display: flex; height: 100vh; }
 
-/* --- Sidebar Styles --- */
-.sidebar { width: 280px; background-color: var(--sidebar-color); padding: 1rem; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
-.sidebar-header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
-.sidebar-header h2 { font-size: 1.5rem; }
-.new-chat-btn { width: 100%; padding: 0.75rem; margin-top: 1rem; background-color: var(--primary-accent); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
-.new-chat-btn:hover { background-color: #0088cc; }
-.session-list { list-style: none; overflow-y: auto; flex-grow: 1; padding: 0; }
-.session-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; word-break: break-all; }
-.session-item:hover { background-color: var(--surface-color); }
-.session-item.active { background-color: var(--primary-accent); }
-.settings-icon {
-    margin-top: auto; padding: 1rem; font-size: 1.1rem; cursor: pointer;
-    border-top: 1px solid var(--border-color); color: var(--subtle-text-color);
-    text-align: center; transition: background-color 0.2s; border-radius: 8px;
+/* --- Sidebar & Info Panel Styles --- */
+.sidebar {
+    width: 320px;
+    background-color: var(--sidebar-color);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
 }
-.settings-icon:hover { background-color: var(--surface-color); color: var(--text-color); }
+.sidebar-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.sidebar-header h2 { font-size: 1.5rem; }
+.info-panel {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.info-panel p {
+    margin-bottom: 1rem;
+    color: var(--subtle-text-color);
+    line-height: 1.7;
+}
+.info-panel strong {
+    color: var(--text-color);
+    font-weight: 600;
+}
+.info-panel ul {
+    list-style-position: inside;
+    padding-left: 0.5rem;
+    margin-bottom: 1rem;
+}
+.info-panel li {
+    margin-bottom: 0.5rem;
+}
+.info-panel .howto {
+    margin-top: 2rem;
+    font-style: italic;
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+.settings-icon {
+    margin-top: auto;
+    padding: 1rem;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border-top: 1px solid var(--border-color);
+    color: var(--subtle-text-color);
+    text-align: center;
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 8px;
+}
+.settings-icon:hover {
+    background-color: var(--surface-color);
+    color: var(--text-color);
+}
 
 
 /* --- Main Chat Area Styles --- */
 .chat-area { flex-grow: 1; display: flex; flex-direction: column; }
-.welcome-screen { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-.welcome-screen h1 { font-size: 4rem; color: var(--primary-accent); }
-.welcome-screen p { color: var(--subtle-text-color); font-size: 1.2rem; }
 .chat-screen { flex-grow: 1; display: flex; flex-direction: column; height: 100%; }
-.chat-container { flex-grow: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
-.chat-bubble { padding: 1rem 1.5rem; border-radius: 18px; max-width: 75%; line-height: 1.5; animation: fadeIn 0.5s ease-out; }
+.chat-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+.chat-bubble {
+    padding: 1rem 1.5rem;
+    border-radius: 18px;
+    max-width: 75%;
+    line-height: 1.5;
+    animation: fadeIn 0.5s ease-out;
+}
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .user-bubble { background-color: var(--primary-accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
 .ai-bubble { background-color: var(--surface-color); color: var(--text-color); align-self: flex-start; border-bottom-left-radius: 4px; }
-.input-area { padding: 1.5rem; text-align: center; border-top: 1px solid var(--border-color); }
+.input-area {
+    padding: 1.5rem;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--sidebar-color);
+}
 .status-message { min-height: 24px; color: var(--subtle-text-color); margin-bottom: 1rem; }
-.record-btn { width: 80px; height: 80px; font-size: 2rem; border-radius: 50%; border: none; background-color: var(--surface-color); color: var(--text-color); cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: all 0.3s ease; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.record-btn {
+    width: 80px; height: 80px; font-size: 2rem; border-radius: 50%; border: none;
+    background-color: var(--surface-color); color: var(--text-color); cursor: pointer;
+    display: inline-flex; justify-content: center; align-items: center;
+    transition: all 0.3s ease; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
 .record-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .record-btn:hover:not(:disabled):not(.recording) { background-color: var(--primary-accent); transform: scale(1.1); }
 .record-btn.recording { background-color: var(--recording-color); color: white; animation: pulse 1.5s infinite; }
@@ -67,7 +129,7 @@ body {
     animation: fadeIn 0.3s ease-out;
 }
 .modal-content {
-    background: var(--sidebar-color);
+    background: var(--surface-color);
     padding: 2rem;
     border-radius: 16px;
     border: 1px solid var(--border-color);

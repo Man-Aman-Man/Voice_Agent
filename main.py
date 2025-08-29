@@ -1,11 +1,7 @@
-# main.py
 import logging
 import asyncio
 import uuid
-import shelve
-import atexit
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -19,8 +15,9 @@ from assemblyai.streaming.v3 import (
     BeginEvent
 )
 
-# We import the services, but they will be initialized with keys from the client
-from services import google_gemini_service, murf_ai_service
+# We are no longer using the config.py file
+# Services will be initialized with keys from the client
+from services import google_gemini_service, murf_ai_service, stock_service, currency_service
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -29,64 +26,60 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 templates = Jinja2Templates(directory="frontend")
 
-db = shelve.open("chat_history.db", writeback=True)
-atexit.register(db.close)
-
 @app.get("/")
 async def read_index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/agent/sessions")
-async def get_sessions():
-    return list(db.keys())
-
-@app.get("/agent/chat/{session_id}")
-async def get_chat_history(session_id: str):
-    history = db.get(session_id, [])
-    # Convert Gemini's Content objects to a JSON-serializable format
-    serializable_history = [part.to_dict() for part in history]
-    return serializable_history
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    # Extract keys and session ID from query parameters sent by the client
+    # Extract all 5 API keys from the WebSocket query parameters
     assemblyai_key = websocket.query_params.get('assemblyai_key')
     google_gemini_key = websocket.query_params.get('google_gemini_key')
     murf_ai_key = websocket.query_params.get('murf_ai_key')
-    session_id = websocket.query_params.get('session_id')
+    alpha_vantage_key = websocket.query_params.get('alpha_vantage_key')
+    exchange_rate_key = websocket.query_params.get('exchange_rate_key')
     
-    if not all([assemblyai_key, google_gemini_key, murf_ai_key, session_id]):
-        await websocket.close(code=1008, reason="API keys or session_id are missing.")
+    # Check if all keys are provided
+    if not all([assemblyai_key, google_gemini_key, murf_ai_key, alpha_vantage_key, exchange_rate_key]):
+        await websocket.close(code=1008, reason="One or more API keys are missing.")
         return
 
     await websocket.accept()
-    logger.info(f"WebSocket established for session: {session_id}")
+    logger.info("WebSocket connection established with client-provided keys.")
 
-    # Initialize services with client-provided keys for this session
+    # Initialize services with the keys from this specific client
     google_gemini_service.initialize(google_gemini_key)
+    stock_service.initialize(alpha_vantage_key)
+    #cricket_service.initialize(rapidapi_key) # Assuming you add this back
+    currency_service.initialize(exchange_rate_key)
 
     audio_queue = asyncio.Queue()
     main_loop = asyncio.get_running_loop()
     full_transcript = ""
+    chat_history = [] # Use a simple in-memory list for the session history
 
     def on_turn(self, event: TurnEvent):
-        nonlocal full_transcript
+        nonlocal full_transcript, chat_history
         transcript = event.transcript
         if transcript:
             full_transcript = transcript
             asyncio.run_coroutine_threadsafe(websocket.send_text(full_transcript), main_loop)
+            
             if event.end_of_turn:
-                logger.info(f"End of turn for session {session_id}: '{full_transcript}'")
+                logger.info(f"End of turn: '{full_transcript}'")
                 async def get_gemini_and_respond_task(text):
+                    nonlocal chat_history
                     try:
-                        history = db.get(session_id, [])
-                        llm_response, new_history = await google_gemini_service.get_chat_response(history, text)
-                        db[session_id] = new_history
-                        db.sync()
+                        llm_response, new_history = await google_gemini_service.get_chat_response(chat_history, text)
+                        chat_history = new_history # Update the in-memory history
+                        
+                        logger.info(f"Gemini Response: {llm_response}")
                         await websocket.send_text(f"AI_RESPONSE:{llm_response}")
+                        
                         await murf_ai_service.stream_tts_audio(llm_response, murf_ai_key, str(uuid.uuid4()), websocket)
                     except Exception as e:
-                        logger.error(f"Error in Gemini/Murf pipeline for session {session_id}: {e}")
+                        logger.error(f"Error in Gemini/Murf pipeline: {e}")
+
                 asyncio.run_coroutine_threadsafe(get_gemini_and_respond_task(full_transcript), main_loop)
                 full_transcript = ""
 

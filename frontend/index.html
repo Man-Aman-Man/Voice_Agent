@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus AI Agent</title>
+    <title>Kratosni - AI Voice Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -13,25 +13,26 @@
     <div class="app-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2>Chat History</h2>
-                <button id="newChatBtn" class="new-chat-btn">+ New Chat</button>
+                <h2>About Kratosni</h2>
             </div>
-            <ul id="sessionList" class="session-list">
+            <div class="info-panel">
+                <p><strong>Kratosni</strong> is a real-time, streaming conversational AI agent with a witty and helpful personality.</p>
+                <p><strong>Special Skills:</strong></p>
+                <ul>
+                    <li>📈 Live Stock Prices</li>
+                    <li>💱 Currency Conversion</li>
                 </ul>
+                <p class="howto">Click the microphone to start a conversation. You can interrupt Kratosni at any time by speaking again.</p>
+            </div>
             <div id="settings-icon" class="settings-icon" title="API Key Settings">⚙️ Settings</div>
         </aside>
 
         <main class="chat-area">
-            <div id="welcomeScreen" class="welcome-screen">
-                <h1>Nexus</h1>
-                <p>Your witty AI Assistant. Start a new chat to begin.</p>
-            </div>
-
-            <div id="chatScreen" class="chat-screen" style="display: none;">
+            <div class="chat-screen">
                 <div id="chatHistoryContainer" class="chat-container">
                     </div>
                 <div class="input-area">
-                    <div id="statusMessage" class="status-message">Click the mic to speak</div>
+                    <div id="statusMessage" class="status-message">Enter API Keys in Settings to begin</div>
                     <button type="button" id="recordBtn" class="record-btn" disabled>
                         <span class="icon">🎙️</span>
                     </button>
@@ -56,6 +57,14 @@
                 <div class="form-group">
                     <label for="murf-ai-key">Murf AI API Key</label>
                     <input type="password" id="murf-ai-key" required>
+                </div>
+                <div class="form-group">
+                    <label for="alpha-vantage-key">Alpha Vantage API Key (Stocks)</label>
+                    <input type="password" id="alpha-vantage-key" required>
+                </div>
+                <div class="form-group">
+                    <label for="exchange-rate-key">ExchangeRate-API Key (Currency)</label>
+                    <input type="password" id="exchange-rate-key" required>
                 </div>
                 <div class="modal-actions">
                     <button type="submit" class="save-btn">Save Keys</button>

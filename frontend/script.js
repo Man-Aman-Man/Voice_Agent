@@ -1,13 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Element References ---
-    const newChatBtn = document.getElementById('newChatBtn');
-    const sessionList = document.getElementById('sessionList');
     const recordBtn = document.getElementById('recordBtn');
     const statusMessage = document.getElementById('statusMessage');
     const chatHistoryContainer = document.getElementById('chatHistoryContainer');
-    const welcomeScreen = document.getElementById('welcomeScreen');
-    const chatScreen = document.getElementById('chatScreen');
     const audioPlayer = document.createElement('audio');
+
+    // Settings Modal Elements
     const settingsIcon = document.getElementById('settings-icon');
     const settingsModal = document.getElementById('settings-modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
@@ -15,30 +13,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Global State ---
     let isRecording = false;
-    let sessionId = null;
     let webSocket = null;
     let audioChunksPlayback = [];
     let stream, audioContextRecording, processor, source;
 
     // --- Initialization ---
     function initializeApp() {
-        const urlParams = new URLSearchParams(window.location.search);
-        sessionId = urlParams.get("session_id");
-        
         loadApiKeys();
         checkKeysAndSetStatus();
-        loadAndRenderSessions();
-
-        if (sessionId) {
-            loadChatHistory(sessionId);
-        } else {
-            showWelcomeScreen();
-        }
         setupEventListeners();
+        addMessage("Hello! I'm Kratosni. Click the mic and let's talk.", 'ai');
     }
 
     function setupEventListeners() {
-        newChatBtn.addEventListener('click', createNewChat);
         recordBtn.addEventListener('click', toggleRecording);
         settingsIcon.addEventListener('click', () => settingsModal.style.display = 'flex');
         closeModalBtn.addEventListener('click', () => settingsModal.style.display = 'none');
@@ -55,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('assemblyai_key', document.getElementById('assemblyai-key').value);
         localStorage.setItem('google_gemini_key', document.getElementById('google-gemini-key').value);
         localStorage.setItem('murf_ai_key', document.getElementById('murf-ai-key').value);
+        localStorage.setItem('alpha_vantage_key', document.getElementById('alpha-vantage-key').value);
+        localStorage.setItem('exchange_rate_key', document.getElementById('exchange-rate-key').value);
         alert("API Keys saved successfully!");
     }
 
@@ -62,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('assemblyai-key').value = localStorage.getItem('assemblyai_key') || '';
         document.getElementById('google-gemini-key').value = localStorage.getItem('google_gemini_key') || '';
         document.getElementById('murf-ai-key').value = localStorage.getItem('murf_ai_key') || '';
+        document.getElementById('alpha-vantage-key').value = localStorage.getItem('alpha_vantage_key') || '';
+        document.getElementById('exchange-rate-key').value = localStorage.getItem('exchange_rate_key') || '';
     }
 
     function getApiKeys() {
@@ -69,68 +60,23 @@ document.addEventListener('DOMContentLoaded', () => {
             assemblyai: localStorage.getItem('assemblyai_key'),
             google_gemini: localStorage.getItem('google_gemini_key'),
             murf_ai: localStorage.getItem('murf_ai_key'),
+            alpha_vantage: localStorage.getItem('alpha_vantage_key'),
+            exchange_rate: localStorage.getItem('exchange_rate_key'),
         };
     }
 
     function checkKeysAndSetStatus() {
         const keys = getApiKeys();
-        if (!sessionId) {
+        if (!keys.assemblyai || !keys.google_gemini || !keys.murf_ai || !keys.alpha_vantage || !keys.exchange_rate) {
             recordBtn.disabled = true;
-            statusMessage.textContent = "Start a new chat or select one from the history.";
-        } else if (!keys.assemblyai || !keys.google_gemini || !keys.murf_ai) {
-            recordBtn.disabled = true;
-            statusMessage.textContent = "Please enter your API keys in Settings (found in the sidebar).";
+            statusMessage.textContent = "Please enter all API keys in Settings (⚙️)";
         } else {
             recordBtn.disabled = false;
             statusMessage.textContent = "Ready. Click the mic to start.";
         }
     }
 
-    // --- Session Management ---
-    async function loadAndRenderSessions() {
-        try {
-            const response = await fetch('/agent/sessions');
-            if (!response.ok) return;
-            const sessions = await response.json();
-            sessionList.innerHTML = '';
-            sessions.forEach(id => {
-                const li = document.createElement('li');
-                li.className = 'session-item';
-                li.dataset.sessionId = id;
-                li.textContent = `Chat - ${id.substring(8, 14)}`;
-                if (id === sessionId) li.classList.add('active');
-                li.onclick = () => window.location.search = `?session_id=${id}`;
-                sessionList.appendChild(li);
-            });
-        } catch (error) {
-            console.error("Failed to load sessions:", error);
-        }
-    }
-
-    function createNewChat() {
-        const newSessionId = `session_${Date.now()}`;
-        window.location.search = `?session_id=${newSessionId}`;
-    }
-
     // --- Chat History & UI ---
-    async function loadChatHistory(id) {
-        try {
-            const response = await fetch(`/agent/chat/${id}`);
-            showChatScreen();
-            chatHistoryContainer.innerHTML = '';
-            if (!response.ok) {
-                addMessage("Start this new conversation by speaking.", 'ai');
-                return;
-            }
-            const history = await response.json();
-            history.forEach(msg => {
-                addMessage(msg.parts[0].text, msg.role === 'user' ? 'user' : 'ai');
-            });
-        } catch (error) {
-            console.error("Failed to load chat history:", error);
-        }
-    }
-
     function addMessage(text, type) {
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${type}-bubble`;
@@ -150,14 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
     }
 
-    function showWelcomeScreen() { welcomeScreen.style.display = 'flex'; chatScreen.style.display = 'none'; }
-    function showChatScreen() { welcomeScreen.style.display = 'none'; chatScreen.style.display = 'flex'; }
-
     // --- WebSocket Logic ---
     function setupWebSocket() {
         return new Promise((resolve, reject) => {
             const keys = getApiKeys();
-            const wsUrl = `ws://127.0.0.1:8000/ws?session_id=${sessionId}&assemblyai_key=${keys.assemblyai}&google_gemini_key=${keys.google_gemini}&murf_ai_key=${keys.murf_ai}`;
+            const wsUrl = `ws://127.0.0.1:8000/ws?assemblyai_key=${keys.assemblyai}&google_gemini_key=${keys.google_gemini}&murf_ai_key=${keys.murf_ai}&alpha_vantage_key=${keys.alpha_vantage}&exchange_rate_key=${keys.exchange_rate}`;
             
             webSocket = new WebSocket(wsUrl);
             webSocket.onopen = resolve;
@@ -165,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             webSocket.onerror = (error) => { console.error("WebSocket Error:", error); statusMessage.textContent = "Connection error."; reject(error); };
             webSocket.onclose = (event) => { 
                 if (isRecording) { stopRecordingCleanup(); }
-                statusMessage.textContent = event.reason || "Session finished. Ready for next chat.";
+                statusMessage.textContent = event.reason || "Session finished. Click mic to start again.";
             };
         });
     }
@@ -231,14 +174,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function startRecording() {
         if (isRecording) return;
+
         if (!audioPlayer.paused) {
             audioPlayer.pause();
             audioPlayer.currentTime = 0;
             console.log("Agent playback interrupted.");
         }
+
         isRecording = true;
         updateButtonUI(true);
         statusMessage.textContent = "Connecting...";
+
         try {
             await setupWebSocket();
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
