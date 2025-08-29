@@ -16,10 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let webSocket = null;
     let audioChunksPlayback = [];
     let stream, audioContextRecording, processor, source;
+    let sessionId = null;
 
     // --- Initialization ---
     function initializeApp() {
         loadApiKeys();
+        loadAndSetSessionId();
         checkKeysAndSetStatus();
         setupEventListeners();
         addMessage("Hello! I'm Kratosni. Click the mic and let's talk.", 'ai');
@@ -37,6 +39,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function loadAndSetSessionId() {
+        sessionId = localStorage.getItem('kratosni_session_id');
+        if (!sessionId) {
+            sessionId = `kratosni_session_${Date.now()}`;
+            localStorage.setItem('kratosni_session_id', sessionId);
+        }
+        console.log("Using Session ID:", sessionId);
+    }
+
+
     // --- API Key Management ---
     function saveApiKeys() {
         localStorage.setItem('assemblyai_key', document.getElementById('assemblyai-key').value);
@@ -49,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadApiKeys() {
         document.getElementById('assemblyai-key').value = localStorage.getItem('assemblyai_key') || '';
-        document.getElementById('google-gemini-key').value = localStorage.getItem('google_gemini_key') || '';
+        document.getElementById('google-gemini-key').value = localStorage.getItem('google-gemini-key') || '';
         document.getElementById('murf-ai-key').value = localStorage.getItem('murf_ai_key') || '';
         document.getElementById('alpha-vantage-key').value = localStorage.getItem('alpha_vantage_key') || '';
         document.getElementById('exchange-rate-key').value = localStorage.getItem('exchange_rate_key') || '';
@@ -98,26 +110,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- WebSocket Logic ---
     function setupWebSocket() {
-    return new Promise((resolve, reject) => {
-        const keys = getApiKeys();
+        return new Promise((resolve, reject) => {
+            const keys = getApiKeys();
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const finalWsUrl = `${protocol}//${window.location.host}/ws?session_id=${sessionId}&assemblyai_key=${keys.assemblyai}&google_gemini_key=${keys.google_gemini}&murf_ai_key=${keys.murf_ai}&alpha_vantage_key=${keys.alpha_vantage}&exchange_rate_key=${keys.exchange_rate}`;
 
-        // --- THIS IS THE FIX ---
-        // Dynamically determine the WebSocket protocol and host
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const wsUrl = `${protocol}//${host}/ws?assemblyai_key=${keys.assemblyai}&google_gemini_key=${keys.google_gemini}&murf_ai_key=${keys.murf_ai}&alpha_vantage_key=${keys.alpha_vantage}&exchange_rate_key=${keys.exchange_rate}`;
-
-        webSocket = new WebSocket(wsUrl);
-        // ... (the rest of the function is unchanged)
-        webSocket.onopen = resolve;
-        webSocket.onmessage = handleWebSocketMessage;
-        webSocket.onerror = (error) => { console.error("WebSocket Error:", error); statusMessage.textContent = "Connection error."; reject(error); };
-        webSocket.onclose = (event) => { 
-            if (isRecording) { stopRecordingCleanup(); }
-            statusMessage.textContent = event.reason || "Session finished. Ready for next chat.";
-        };
-    });
-}
+            webSocket = new WebSocket(finalWsUrl);
+            webSocket.onopen = resolve;
+            webSocket.onmessage = handleWebSocketMessage;
+            webSocket.onerror = (error) => { console.error("WebSocket Error:", error); statusMessage.textContent = "Connection error."; reject(error); };
+            webSocket.onclose = (event) => { 
+                if (isRecording) { stopRecordingCleanup(); }
+                statusMessage.textContent = event.reason || "Session finished. Click mic to start again.";
+            };
+        });
+    }
 
     function handleWebSocketMessage(event) {
         const message = event.data;
@@ -126,13 +133,21 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (message === "AUDIO_END") {
             playConcatenatedAudio();
         } else if (message.startsWith("AI_RESPONSE:")) {
+            const liveBubble = chatHistoryContainer.querySelector('.user-bubble.live');
+            if (liveBubble) {
+                // Finalize the live transcript before showing AI response
+                addMessage(liveBubble.textContent, 'user');
+                liveBubble.remove();
+            }
             const aiResponse = message.substring("AI_RESPONSE:".length);
             addMessage(aiResponse, 'ai');
             statusMessage.textContent = "Speaking...";
         } else if (message === "END_OF_TURN") {
             const liveBubble = chatHistoryContainer.querySelector('.user-bubble.live');
             if (liveBubble) {
-                liveBubble.classList.remove('live');
+                 // Finalize the bubble by creating a permanent copy
+                addMessage(liveBubble.textContent, 'user');
+                liveBubble.remove();
             }
             statusMessage.textContent = "Thinking...";
         } else {
