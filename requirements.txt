@@ -1,9 +1,9 @@
 # requirements.txt
-
 fastapi
-uvicorn[standard]
+uvicorn
 jinja2
 python-dotenv
 requests
 assemblyai
 google-generativeai
+websockets

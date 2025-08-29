@@ -1,21 +1,30 @@
 # main.py
+import logging
+import asyncio
+import uuid
 import shelve
 import atexit
-import logging
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-import config
-from services import murf_ai_service, assemblyai_service, google_gemini_service
-from schemas import chat_schemas
+from assemblyai.streaming.v3 import (
+    StreamingClient,
+    StreamingClientOptions,
+    StreamingEvents,
+    StreamingParameters,
+    StreamingError,
+    TurnEvent,
+    BeginEvent
+)
 
-# --- New: Configure Logging ---
+# We import the services, but they will be initialized with keys from the client
+from services import google_gemini_service, murf_ai_service
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# --- Initialization & Configuration ---
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 templates = Jinja2Templates(directory="frontend")
@@ -23,58 +32,107 @@ templates = Jinja2Templates(directory="frontend")
 db = shelve.open("chat_history.db", writeback=True)
 atexit.register(db.close)
 
-# --- API Endpoints ---
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def read_index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/agent/sessions", response_model=chat_schemas.SessionListResponse)
+@app.get("/agent/sessions")
 async def get_sessions():
-    return chat_schemas.SessionListResponse(sessions=list(db.keys()))
+    return list(db.keys())
 
 @app.get("/agent/chat/{session_id}")
 async def get_chat_history(session_id: str):
-    if session_id not in db:
-        raise HTTPException(status_code=404, detail="Session not found")
-    serializable_history = [h.to_dict() for h in db[session_id]]
-    return JSONResponse(content=serializable_history)
+    history = db.get(session_id, [])
+    # Convert Gemini's Content objects to a JSON-serializable format
+    serializable_history = [part.to_dict() for part in history]
+    return serializable_history
 
-@app.delete("/agent/chat/{session_id}", response_model=chat_schemas.DeleteResponse)
-async def delete_chat_session(session_id: str):
-    if session_id in db:
-        del db[session_id]
-        db.sync()
-        return chat_schemas.DeleteResponse(message=f"Session {session_id} deleted.")
-    raise HTTPException(status_code=404, detail="Session not found")
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    # Extract keys and session ID from query parameters sent by the client
+    assemblyai_key = websocket.query_params.get('assemblyai_key')
+    google_gemini_key = websocket.query_params.get('google_gemini_key')
+    murf_ai_key = websocket.query_params.get('murf_ai_key')
+    session_id = websocket.query_params.get('session_id')
+    
+    if not all([assemblyai_key, google_gemini_key, murf_ai_key, session_id]):
+        await websocket.close(code=1008, reason="API keys or session_id are missing.")
+        return
 
-@app.post("/agent/chat/{session_id}", response_model=chat_schemas.ChatResponse | chat_schemas.FallbackResponse)
-async def agent_chat(session_id: str, file: UploadFile = File(...)):
-    audio_bytes = await file.read()
+    await websocket.accept()
+    logger.info(f"WebSocket established for session: {session_id}")
+
+    # Initialize services with client-provided keys for this session
+    google_gemini_service.initialize(google_gemini_key)
+
+    audio_queue = asyncio.Queue()
+    main_loop = asyncio.get_running_loop()
+    full_transcript = ""
+
+    def on_turn(self, event: TurnEvent):
+        nonlocal full_transcript
+        transcript = event.transcript
+        if transcript:
+            full_transcript = transcript
+            asyncio.run_coroutine_threadsafe(websocket.send_text(full_transcript), main_loop)
+            if event.end_of_turn:
+                logger.info(f"End of turn for session {session_id}: '{full_transcript}'")
+                async def get_gemini_and_respond_task(text):
+                    try:
+                        history = db.get(session_id, [])
+                        llm_response, new_history = await google_gemini_service.get_chat_response(history, text)
+                        db[session_id] = new_history
+                        db.sync()
+                        await websocket.send_text(f"AI_RESPONSE:{llm_response}")
+                        await murf_ai_service.stream_tts_audio(llm_response, murf_ai_key, str(uuid.uuid4()), websocket)
+                    except Exception as e:
+                        logger.error(f"Error in Gemini/Murf pipeline for session {session_id}: {e}")
+                asyncio.run_coroutine_threadsafe(get_gemini_and_respond_task(full_transcript), main_loop)
+                full_transcript = ""
+
+    def on_error(self, error: StreamingError):
+        logger.error(f"AssemblyAI Streaming Error: {error}")
+
+    client = StreamingClient(
+        StreamingClientOptions(api_key=assemblyai_key)
+    )
     
-    # Pipeline Step 1: Transcribe Audio
-    user_query = assemblyai_service.transcribe_audio(audio_bytes)
-    logger.info(f"[{session_id}] User Query: {user_query}")
-    
+    client.on(StreamingEvents.Turn, on_turn)
+    client.on(StreamingEvents.Error, on_error)
+
+    client.connect(StreamingParameters(sample_rate=16000))
+
+    def audio_generator():
+        while True:
+            try:
+                future = asyncio.run_coroutine_threadsafe(audio_queue.get(), main_loop)
+                chunk = future.result()
+                if chunk is None: break
+                yield chunk
+            except Exception as e:
+                logger.error(f"Error in audio generator: {e}")
+                break
+
+    async def receive_audio():
+        try:
+            while True:
+                data = await websocket.receive_bytes()
+                await audio_queue.put(data)
+        except WebSocketDisconnect:
+            logger.info("Client disconnected. Signaling end of audio stream.")
+            await audio_queue.put(None)
+
+    stream_task = main_loop.run_in_executor(
+        None,
+        client.stream,
+        audio_generator()
+    )
+
     try:
-        # Pipeline Step 2: Get Chat History and LLM Response
-        history = db.get(session_id, [])
-        llm_text, new_history = google_gemini_service.get_chat_response(history, user_query)
-        db[session_id] = new_history
-        db.sync()
-        logger.info(f"[{session_id}] LLM Response: {llm_text}")
-        
-        # Pipeline Step 3: Generate Audio for the Response
-        audio_url = murf_ai_service.generate_audio(llm_text)
-        
-        return chat_schemas.ChatResponse(
-            audio_url=audio_url,
-            user_query=user_query,
-            llm_response=llm_text
-        )
+        await receive_audio()
     except Exception as e:
-        logger.error(f"Gemini API Error in session {session_id}: {e}")
-        fallback_text = "I'm having trouble connecting right now. Please try again."
-        
-        # Generate and return fallback audio
-        fallback_audio_url = murf_ai_service.generate_audio(fallback_text)
-        return chat_schemas.FallbackResponse(audio_url=fallback_audio_url)
+        logger.error(f"An error occurred: {e}")
+    finally:
+        await stream_task
+        logger.info("Closing AssemblyAI connection.")
+        client.disconnect()

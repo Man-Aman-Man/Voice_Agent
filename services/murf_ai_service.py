@@ -1,19 +1,48 @@
 # services/murf_ai_service.py
-import requests
-from fastapi import HTTPException
-from config import MURF_API_KEY # Import key from config
+import json
+import websockets
 
-def generate_audio(text: str) -> str:
-    # ... (rest of the function is unchanged)
-    headers = {"api-key": MURF_API_KEY, "Content-Type": "application/json"}
-    body = {"text": text, "voiceId": "en-IN-priya", "format": "mp3"}
+async def stream_tts_audio(text: str, api_key: str, context_id: str, websocket):
+    """
+    Streams text to Murf using a context_id and forwards audio to the client.
+    """
+    uri = f"wss://api.murf.ai/v1/speech/stream-input?api-key={api_key}&sampleRate=24000&encoding=wav"
+
     try:
-        response = requests.post("https://api.murf.ai/v1/speech/generate", headers=headers, json=body)
-        response.raise_for_status()
-        data = response.json()
-        audio_url = data.get("audioFile")
-        if not audio_url:
-            raise HTTPException(status_code=500, detail="Murf API did not return an audio file URL.")
-        return audio_url
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Error calling Murf API: {e}")
+        async with websockets.connect(uri) as murf_ws:
+            print("Connected to Murf AI WebSocket.")
+
+            voice_config_msg = {
+                "voice_config": {"voiceId": "en-US-amara"},
+                "context_id": context_id
+            }
+            await murf_ws.send(json.dumps(voice_config_msg))
+
+            text_payload = {
+                "text": text,
+                "end": True,
+                "context_id": context_id
+            }
+            await murf_ws.send(json.dumps(text_payload))
+
+            print("Text sent to Murf AI. Waiting for audio...")
+
+            while True:
+                message_str = await murf_ws.recv()
+                message = json.loads(message_str)
+
+                if 'audio' in message:
+                    audio_chunk_b64 = message['audio']
+                    # Don't log the full chunk, just confirm receipt
+                    print(f"Received audio chunk from Murf, forwarding to client...")
+                    await websocket.send_text(f"AUDIO_CHUNK:{audio_chunk_b64}")
+
+                if message.get('final'):
+                    print("Final audio chunk received from Murf AI.")
+                    await websocket.send_text("AUDIO_END")
+                    break
+
+    except websockets.exceptions.ConnectionClosed as e:
+        print(f"Murf AI WebSocket connection closed: {e.code} {e.reason}")
+    except Exception as e:
+        print(f"An error occurred with Murf AI WebSocket: {e}")
