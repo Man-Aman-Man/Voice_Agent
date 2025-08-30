@@ -1,92 +1,86 @@
-# 🤖 AI Voice Agent - 30 Days of AI Challenge
+# Kratosni - A Real-time Conversational AI Voice Agent
 
-This project is a fully conversational AI voice agent built as part of the **#30DaysofVoiceAgents** challenge by Murf AI. It features a complete voice-in, voice-out pipeline with persistent chat history, allowing for natural, context-aware conversations.
+Kratosni is a sophisticated, end-to-end streaming conversational AI built as the final project for the **#30DaysofVoiceAgents** challenge by Murf AI. It features a complete voice-in, voice-out pipeline with a polished UI, client-side configuration, and special skills powered by function calling.
 
-The application is built with a Python backend using FastAPI and a vanilla JavaScript frontend.
+---
 
+### 🚀 [Try the Live Demo Here!](https://kratosni-voice-agent.onrender.com)
 
+---
 
 ## ✨ Features
 
-* **Real-time Voice Conversation:** Speak to the agent and receive a spoken response.
-* **Context-Aware Memory:** The agent remembers previous turns in the conversation using a session-based chat history.
-* **Persistent Chat Sessions:** Chat history is saved to disk using Python's `shelve` module and survives server restarts.
-* **Session Management UI:** A sidebar displays all past conversations, allowing you to load and delete previous chats.
-* **End-to-End AI Pipeline:**
-    * **Speech-to-Text:** Powered by **AssemblyAI**.
-    * **LLM Logic:** Intelligent and contextual responses from **Google Gemini**.
-    * **Text-to-Speech:** Natural-sounding voice output from **Murf AI**.
-* **Robust Error Handling:** The agent provides a spoken fallback message if it cannot connect to the LLM.
+* **Real-time Voice Conversation:** Speak to the agent and receive a spoken response with low latency.
+* **Intelligent Persona:** Interacts with the witty and helpful personality of "Kratosni."
+* **Advanced Special Skills:** Uses Google Gemini's function calling to:
+    * 📈 Fetch live stock prices.
+    * 💱 Perform real-time currency conversions.
+* **Polished UI:** A professional, dark-themed interface with a persistent chat history display.
+* **Client-Side API Key Management:** A settings modal allows users to securely enter their own API keys, which are stored in the browser's local storage.
+* **Natural Interruptions:** The agent immediately stops speaking and starts listening the moment the user begins to speak, allowing for fluid conversation.
+* **End-to-End Streaming Pipeline:**
+    * **Speech-to-Text:** Live transcription via **AssemblyAI**.
+    * **LLM Logic:** Contextual understanding and tool use by **Google Gemini**.
+    * **Text-to-Speech:** High-quality, streaming voice output from **Murf AI**.
 
-## 🏛️ Architectural Decisions & Tradeoffs
+## 🏛️ Architecture
 
-This section documents the reasoning behind the technical choices made during development.
+The application uses a decoupled frontend-backend architecture:
 
-* **Backend Framework: FastAPI**
-    * **Decision:** FastAPI was chosen as recommended by the challenge.
-    * **Justification:** Its modern, asynchronous nature is perfect for handling I/O-bound tasks like making API calls to external services. Features like automatic OpenAPI documentation (`/docs`) and Pydantic data validation are incredibly valuable for rapid development and debugging.
-
-* **LLM: Google Gemini (`gemini-1.5-flash`)**
-    * **Decision:** The Gemini API was used as the core intelligence layer.
-    * **Justification:** It offers a very generous free tier (60 requests per minute) which is more than sufficient for development and prototyping. The `gemini-1.5-flash` model provides a great balance of speed and capability.
-
-* **Datastore: Python `shelve` Module**
-    * **Decision:** Instead of a full-fledged database, the built-in `shelve` module was used for persistence.
-    * **Tradeoff:** The primary benefit is **simplicity**. It requires no external dependencies or setup and acts like a persistent dictionary, making it ideal for a prototype. The tradeoff is that it is **not suitable for production** with high concurrency, as file-based databases can run into locking issues. It was chosen over a simple in-memory dictionary, which was not persistent across server restarts.
+1.  **Frontend (Vanilla JS):** A single-page application that handles all user interaction. It performs client-side audio conversion to PCM using the Web Audio API, manages the UI, and communicates with the backend via a single WebSocket connection.
+2.  **Backend (Python/FastAPI):** An asynchronous API server that orchestrates the entire AI pipeline. It receives the PCM audio stream from the client and manages the real-time, bidirectional communication with all external AI services.
 
 ## 🛠️ Tech Stack
 
-* **Backend:** Python, FastAPI, Uvicorn
-* **Frontend:** HTML5, CSS3, JavaScript
-* **Python Libraries:** `google-generativeai`, `assemblyai`, `requests`, `python-dotenv`, `uvicorn`
-* **Services:** Google Cloud (for Gemini), Murf AI, AssemblyAI
+* **Backend:** Python, FastAPI, Uvicorn, WebSockets
+* **Frontend:** HTML5, CSS3, JavaScript (Web Audio API)
+* **Python Libraries:** `google-generativeai`, `assemblyai`, `websockets`, `requests`
+* **Services:** Murf AI, AssemblyAI, Google Gemini, Alpha Vantage (Stocks), ExchangeRate-API (Currency)
 
 ## 🚀 Getting Started
 
-Follow these instructions to set up and run the project on your local machine.
+The easiest way to try Kratosni is to use the live version deployed on Render.
 
-### Prerequisites
+**[➡️ Click here to access the live demo.](https://kratosni-voice-agent.onrender.com)**
 
+### Local Installation
+
+If you wish to run the project on your local machine, follow these instructions.
+
+**Prerequisites**
 * Python 3.8+
 * An active internet connection
 
-### Installation & Setup
+### **Installation & Setup**
 
 1.  **Clone the repository:**
     ```bash
-    git clone <https://github.com/Man-Aman-Man/Voice_Agent>
-    cd <Voice_Agent>
+    git clone [https://github.com/Man-Aman-Man/Voice_Agent.git](https://github.com/Man-Aman-Man/Voice_Agent.git)
+    cd Voice_Agent
     ```
 
 2.  **Create and activate a virtual environment:**
-    * **Windows:**
-        ```bash
-        python -m venv venv
-        .\venv\Scripts\activate
-        ```
-    * **macOS / Linux:**
-        ```bash
-        python3 -m venv venv
-        source venv/bin/activate
-        ```
+    ```bash
+    # Windows
+    python -m venv venv
+    .\venv\Scripts\activate
+
+    # macOS / Linux
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
 
 3.  **Install dependencies:**
     ```bash
     pip install -r requirements.txt
     ```
 
-4.  **Set up environment variables:**
-    Create a file named `.env` in the root project directory and add your API keys:
-    ```env
-    MURF_API_KEY="your_murf_api_key_here"
-    ASSEMBLYAI_API_KEY="your_assemblyai_api_key_here"
-    GOOGLE_API_KEY="your_google_gemini_api_key_here"
-    ```
+### **Running the Application**
 
-### Running the Application
-
-1.  From the root directory, run the FastAPI server:
+1.  Run the FastAPI server from the root directory:
     ```bash
     uvicorn main:app --reload
     ```
 2.  Open your web browser and navigate to `http://127.0.0.1:8000`.
+3.  Click the **⚙️ Settings** icon in the UI to enter your API keys for all the required services. The keys will be saved in your browser.
+4.  Click the microphone button to start a conversation.
